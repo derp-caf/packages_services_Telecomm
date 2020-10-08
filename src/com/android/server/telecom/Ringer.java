@@ -30,7 +30,6 @@ import android.media.VolumeShaper;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.provider.Settings;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.telecom.LogUtils.EventTimer;
@@ -77,8 +76,6 @@ public class Ringer {
 
     private static final int RAMPING_RINGER_VIBRATION_DURATION = 5000;
     private static final int RAMPING_RINGER_DURATION = 10000;
-
-    private static final int OUTGOING_CALL_VIBRATING_DURATION = 100;
 
     static {
         // construct complete pulse pattern
@@ -162,7 +159,7 @@ public class Ringer {
     /**
      * Used to track the status of {@link #mVibrator} in the case of simultaneous incoming calls.
      */
-    private volatile boolean mIsVibrating = false;
+    private boolean mIsVibrating = false;
 
     /** Initializes the Ringer. */
     @VisibleForTesting
@@ -519,26 +516,5 @@ public class Ringer {
         }
         return mSystemSettingsUtil.canVibrateWhenRinging(context)
             || mSystemSettingsUtil.applyRampingRinger(context);
-    }
-
-    public void startVibratingForOutgoingCallActive() {
-        if (!mIsVibrating
-                && Settings.Global.getInt(mContext.getContentResolver(),
-                        Settings.Global.VIBRATING_FOR_OUTGOING_CALL_ACCEPTED, 1) == 1) {
-            mIsVibrating = true;
-            java.util.concurrent.Executors.defaultThreadFactory().newThread(() -> {
-                final VibrationEffect vibrationEffect =
-                        mVibrationEffectProxy.createWaveform(SIMPLE_VIBRATION_PATTERN,
-                        SIMPLE_VIBRATION_AMPLITUDE, REPEAT_SIMPLE_VIBRATION_AT);
-                final AudioAttributes vibrationAttributes = new AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                        .build();
-                mVibrator.vibrate(vibrationEffect, vibrationAttributes);
-                android.os.SystemClock.sleep(OUTGOING_CALL_VIBRATING_DURATION);
-                mVibrator.cancel();
-                mIsVibrating = false;
-            }).start();
-        }
     }
 }
